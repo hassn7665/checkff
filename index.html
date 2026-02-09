@@ -1,0 +1,76 @@
+
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>التحقق من البطاقة</title>
+<style>
+  body { font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; background: #f9f9f9; }
+  h2 { color: #333; }
+  #result { margin-top: 20px; font-size: 18px; color: #222; background: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 0 5px #ccc; }
+</style>
+</head>
+<body>
+
+<h2>التحقق من البطاقة</h2>
+<div id="result">جارٍ تحميل البيانات...</div>
+
+<script>
+// رابط CSV المنشور من Google Sheet
+const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRRAzjYWiKgq1g8LKGfHZUHsQjlE8ibxFG8OsS3PrZYje5QPecRzQNw5onhFWrczCj3YIDa2gkzMd7n/pubhtml";
+// استبدل XXXXXXX برابط الـ CSV العام من Google Sheet الخاص بك
+
+let cardsData = [];
+
+// قراءة بيانات البطاقة من Google Sheet
+fetch(sheetCSV)
+.then(response => response.text())
+.then(csvText => {
+    const rows = csvText.split('\n');
+    const headers = rows[0].split(',');
+    for(let i=1;i<rows.length;i++){
+        const values = rows[i].split(',');
+        if(values.length < headers.length) continue;
+        const obj = {};
+        headers.forEach((h,j) => {
+            obj[h.trim()] = values[j]?.trim();
+        });
+        if(obj['sn']) cardsData.push(obj);
+    }
+
+    // بعد تحميل البيانات، تحقق من وجود SN في الرابط
+    const urlParams = new URLSearchParams(window.location.search);
+    const sn = urlParams.get('sn'); // الرابط سيكون: page.html?sn=000001
+    displayCard(sn);
+})
+.catch(err => {
+    document.getElementById('result').innerHTML = "❌ حدث خطأ في تحميل البيانات";
+    console.error(err);
+});
+
+// ==========================
+// عرض بيانات البطاقة
+// ==========================
+function displayCard(sn) {
+    const resultDiv = document.getElementById('result');
+    if(!sn) {
+        resultDiv.innerHTML = "❌ لم يتم تمرير الرقم التسلسلي";
+        return;
+    }
+
+    const card = cardsData.find(c => c.sn === sn);
+    if(card){
+        resultDiv.innerHTML = `
+            <p><strong>الاسم الثلاثي:</strong> ${card.name}</p>
+            <p><strong>الرقم النقابي:</strong> ${card.union}</p>
+            <p><strong>الصفة النقابية:</strong> ${card.role}</p>
+        `;
+    } else {
+        resultDiv.innerHTML = "❌ لم يتم العثور على البطاقة";
+    }
+}
+</script>
+
+</body>
+</html>
