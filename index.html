@@ -1,95 +1,49 @@
 
 
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
 <meta charset="UTF-8">
 <title>التحقق من البطاقة</title>
-
-<style>
-body {
-    font-family: Arial, sans-serif;
-    background: #f5f5f5;
-    text-align: center;
-    padding: 30px;
-}
-.card {
-    background: white;
-    max-width: 400px;
-    margin: auto;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
-.success {
-    color: green;
-    font-weight: bold;
-}
-.error {
-    color: red;
-    font-weight: bold;
-}
-</style>
 </head>
-
 <body>
-
-<div class="card">
-    <h2>التحقق من البطاقة</h2>
-    <div id="status">جاري التحقق...</div>
-    <div id="result"></div>
-</div>
+<h2>تحقق من البطاقة</h2>
+<div id="result"></div>
 
 <script>
-// رابط Google Sheet بصيغة CSV
-const SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRRAzjYWiKgq1g8LKGfHZUHsQjlE8ibxFG8OsS3PrZYje5QPecRzQNw5onhFWrczCj3YIDa2gkzMd7n/pub?output=csv";
+// رابط CSV المنشور من Google Sheet
+const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRRAzjYWiKgq1g8LKGfHZUHsQjlE8ibxFG8OsS3PrZYje5QPecRzQNw5onhFWrczCj3YIDa2gkzMd7n/pub?output=csv";
 
-// قراءة SN من الرابط
-const params = new URLSearchParams(window.location.search);
-const snFromUrl = params.get("sn");
+// قراءة البيانات من Google Sheet
+let cardsData = [];
+fetch(sheetCSV)
+.then(response => response.text())
+.then(csvText => {
+    const rows = csvText.trim().split('\n');
+    const headers = rows[0].split(',');
+    for(let i=1;i<rows.length;i++){
+        const obj = {};
+        const values = rows[i].split(',');
+        headers.forEach((h,j) => { obj[h.trim()] = values[j]?.trim(); });
+        if(obj['sn']) cardsData.push(obj);
+    }
 
-// عناصر الصفحة
-const statusDiv = document.getElementById("status");
-const resultDiv = document.getElementById("result");
+    // بعد تحميل CSV، تحقق تلقائي عند وجود ?sn= في الرابط
+    const params = new URLSearchParams(window.location.search);
+    const snParam = params.get('sn');
+    const resultDiv = document.getElementById('result');
 
-if (!snFromUrl) {
-    statusDiv.innerHTML = "<span class='error'>❌ لا يوجد رقم تسلسلي</span>";
-} else {
-    fetch(SHEET_CSV)
-        .then(res => res.text())
-        .then(csv => {
-            const rows = csv.split("\n");
-            const headers = rows[0].split(",").map(h => h.trim());
-            let found = false;
-
-            for (let i = 1; i < rows.length; i++) {
-                const values = rows[i].split(",");
-                let row = {};
-                headers.forEach((h, j) => {
-                    row[h] = values[j]?.trim();
-                });
-
-                if (row.sn === snFromUrl) {
-                    found = true;
-                    statusDiv.innerHTML = "<span class='success'>✅ البطاقة صالحة</span>";
-                    resultDiv.innerHTML = `
-                        <p><strong>الاسم:</strong> ${row.name}</p>
-                        <p><strong>الرقم النقابي:</strong> ${row.union}</p>
-                        <p><strong>الصفة:</strong> ${row.role}</p>
-                    `;
-                    break;
-                }
-            }
-
-            if (!found) {
-                statusDiv.innerHTML = "<span class='error'>❌ لم يتم العثور على البطاقة</span>";
-            }
-        })
-        .catch(() => {
-            statusDiv.innerHTML = "<span class='error'>❌ خطأ في الاتصال بالبيانات</span>";
-        });
-}
+    if(snParam){
+        const card = cardsData.find(c => c.sn === snParam);
+        if(card){
+            resultDiv.innerHTML = `<p>الاسم: ${card.name}<br>الرقم النقابي: ${card.union}<br>الصفة: ${card.role}</p>`;
+        } else {
+            resultDiv.innerHTML = `<p>لم يتم العثور على البطاقة</p>`;
+        }
+    } else {
+        resultDiv.innerHTML = `<p>الرجاء مسح QR للتحقق من البطاقة</p>`;
+    }
+});
 </script>
-
 </body>
 </html>
