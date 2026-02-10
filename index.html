@@ -30,6 +30,7 @@ body {
 </div>
 
 <script>
+// الحصول على الرقم التسلسلي SN من الرابط
 const params = new URLSearchParams(window.location.search);
 const sn = params.get("sn");
 
@@ -38,28 +39,15 @@ if (!sn) {
     throw new Error("No SN");
 }
 
-// رابط Google Sheet بصيغة JSON
-const sheetURL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vRRAzjYWiKgq1g8LKGfHZUHsQjlE8ibxFG8OsS3PrZYje5QPecRzQNw5onhFWrczCj3YIDa2gkzMd7n/gviz/tq?tqx=out:json";
+// رابط Google Sheet عبر OpenSheet
+const sheetURL = "https://opensheet.elk.sh/1b-WOr0vxcbaSoEN4SAmL03pucb6YVZEWVZm_Nx0V7VY/MembershipData%20Data";
 
+// جلب البيانات ومعالجتها
 fetch(sheetURL)
-.then(res => res.text())
-.then(text => {
-    const json = JSON.parse(text.substring(47).slice(0, -2));
-    const rows = json.table.rows;
-
-    let found = null;
-
-    rows.forEach(r => {
-        const rowSN = r.c[6]?.v?.toString().trim(); // العمود SN
-        if (rowSN === sn.trim()) {
-            found = {
-                name: r.c[0]?.v,
-                union: r.c[1]?.v,
-                role: r.c[2]?.v
-            };
-        }
-    });
+.then(res => res.json())
+.then(data => {
+    // data عبارة عن array من الصفوف
+    const found = data.find(row => row.SN?.trim() === sn.trim());
 
     const result = document.getElementById("result");
 
@@ -72,6 +60,10 @@ fetch(sheetURL)
     } else {
         result.innerHTML = "❌ لم يتم العثور على البطاقة";
     }
+})
+.catch(err => {
+    console.error(err);
+    document.getElementById("result").innerHTML = "❌ حدث خطأ أثناء جلب البيانات";
 });
 </script>
 
