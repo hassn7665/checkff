@@ -6,64 +6,61 @@
 <meta charset="UTF-8">
 <title>التحقق من البطاقة</title>
 <style>
-body {
-    font-family: Arial, sans-serif;
-    direction: rtl;
-    text-align: center;
-    background: #f2f2f2;
-}
-.box {
-    background: white;
-    padding: 20px;
-    margin: 50px auto;
-    width: 90%;
-    max-width: 400px;
-    border-radius: 10px;
-}
+body { font-family: Arial, sans-serif; direction: rtl; text-align: center; background: #f2f2f2; }
+.box { background: white; padding: 20px; margin: 50px auto; width: 90%; max-width: 400px; border-radius: 10px; }
 </style>
 </head>
 <body>
 
 <div class="box">
-    <h2>نتيجة التحقق</h2>
-    <div id="result">جاري التحقق...</div>
+<h2>نتيجة التحقق</h2>
+<div id="result">جاري التحقق...</div>
 </div>
 
 <script>
-// الحصول على الرقم التسلسلي SN من الرابط
+// الحصول على الرقم التسلسلي من رابط QR
 const params = new URLSearchParams(window.location.search);
 const sn = params.get("sn");
 
-if (!sn) {
+if(!sn) {
     document.getElementById("result").innerHTML = "❌ رقم البطاقة غير موجود";
     throw new Error("No SN");
 }
 
-// رابط Google Sheet عبر OpenSheet
-const sheetURL = "https://opensheet.elk.sh/1b-WOr0vxcbaSoEN4SAmL03pucb6YVZEWVZm_Nx0V7VY/MembershipData%20Data";
+// رابط Google Sheet المنشور بصيغة CSV
+const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRRAzj.../pub?output=csv";
 
-// جلب البيانات ومعالجتها
-fetch(sheetURL)
-.then(res => res.json())
-.then(data => {
-    // data عبارة عن array من الصفوف
-    const found = data.find(row => row.SN?.trim() === sn.trim());
+fetch(csvURL)
+.then(res => res.text())
+.then(csvText => {
+    const rows = csvText.trim().split("\n");
+    const headers = rows[0].split(",");
+    let found = null;
 
-    const result = document.getElementById("result");
+    for(let i=1; i<rows.length; i++){
+        const values = rows[i].split(",");
+        const obj = {};
+        headers.forEach((h,j) => obj[h.trim()] = values[j]?.trim());
+        if(obj.SN === sn){
+            found = obj;
+            break;
+        }
+    }
 
-    if (found) {
-        result.innerHTML = `
+    const resultDiv = document.getElementById("result");
+    if(found){
+        resultDiv.innerHTML = `
             <p><strong>الاسم الثلاثي:</strong> ${found.name}</p>
             <p><strong>الرقم النقابي:</strong> ${found.union}</p>
             <p><strong>الصفة النقابية:</strong> ${found.role}</p>
         `;
     } else {
-        result.innerHTML = "❌ لم يتم العثور على البطاقة";
+        resultDiv.innerHTML = "❌ لم يتم العثور على البطاقة";
     }
 })
 .catch(err => {
-    console.error(err);
     document.getElementById("result").innerHTML = "❌ حدث خطأ أثناء جلب البيانات";
+    console.error(err);
 });
 </script>
 
