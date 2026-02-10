@@ -9,58 +9,60 @@
 body {
     font-family: Arial, sans-serif;
     direction: rtl;
-    text-align: right;
+    text-align: center;
     background: #f5f5f5;
-    padding: 30px;
 }
-.card {
+.container {
     background: white;
     padding: 20px;
+    margin: 40px auto;
+    width: 90%;
+    max-width: 400px;
     border-radius: 10px;
-    max-width: 500px;
-    margin: auto;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 </style>
 </head>
 <body>
 
-<div class="card" id="result">جارٍ التحقق...</div>
+<div class="container">
+    <h2>نتيجة التحقق</h2>
+    <div id="result">جاري التحقق...</div>
+</div>
 
 <script>
-const sheetCSV =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vRRAzjYWiKgq1g8LKGfHZUHsQjlE8ibxFG8OsS3PrZYje5QPecRzQNw5onhFWrczCj3YIDa2gkzMd7n/pub?output=csv";
+const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRRAzjYWiKgq1g8LKGfHZUHsQjlE8ibxFG8OsS3PrZYje5QPecRzQNw5onhFWrczCj3YIDa2gkzMd7n/pub?output=csv";
 
-function getSN() {
-    return new URLSearchParams(window.location.search).get("sn");
+const params = new URLSearchParams(window.location.search);
+const snFromQR = params.get("sn");
+
+if (!snFromQR) {
+    document.getElementById("result").innerHTML = "❌ رقم البطاقة غير موجود";
 }
 
-fetch(sheetCSV)
+fetch(csvURL)
 .then(res => res.text())
-.then(text => {
-    const rows = text.trim().split("\n").map(r => r.split(","));
+.then(csv => {
+    const rows = csv.split("\n").map(r => r.split(","));
     const headers = rows[0];
-    const sn = getSN();
 
-    for (let i = 1; i < rows.length; i++) {
-        let row = {};
-        headers.forEach((h, j) => row[h.trim()] = rows[i][j]?.trim());
+    const indexSN = headers.indexOf("SN");
+    const indexName = headers.indexOf("name");
+    const indexUnion = headers.indexOf("union");
+    const indexRole = headers.indexOf("role");
 
-        if (row["sn"] === sn) {
-            document.getElementById("result").innerHTML = `
-                <h2>تم التحقق بنجاح ✅</h2>
-                <p><strong>الاسم الثلاثي:</strong> ${row["الاسم الثلاثي"]}</p>
-                <p><strong>الصفة النقابية:</strong> ${row["الصفة النقابية"]}</p>
-                <p><strong>الرقم النقابي:</strong> ${row["الرقم النقابي"]}</p>
-                <p><strong>تاريخ الإصدار:</strong> ${row["تاريخ الاصدار"]}</p>
-                <p><strong>تاريخ الانتهاء:</strong> ${row["تاريخ الانتهاء"]}</p>
-            `;
-            return;
-        }
+    const card = rows.find((row, i) => i > 0 && row[indexSN] === snFromQR);
+
+    const resultDiv = document.getElementById("result");
+
+    if (card) {
+        resultDiv.innerHTML = `
+            <p><strong>الاسم الثلاثي:</strong> ${card[indexName]}</p>
+            <p><strong>الرقم النقابي:</strong> ${card[indexUnion]}</p>
+            <p><strong>الصفة النقابية:</strong> ${card[indexRole]}</p>
+        `;
+    } else {
+        resultDiv.innerHTML = "❌ لم يتم العثور على البطاقة";
     }
-
-    document.getElementById("result").innerHTML =
-        "<h3>❌ لم يتم العثور على البطاقة</h3>";
 });
 </script>
 
