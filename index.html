@@ -10,12 +10,12 @@ body {
     font-family: Arial, sans-serif;
     direction: rtl;
     text-align: center;
-    background: #f5f5f5;
+    background: #f2f2f2;
 }
-.container {
+.box {
     background: white;
     padding: 20px;
-    margin: 40px auto;
+    margin: 50px auto;
     width: 90%;
     max-width: 400px;
     border-radius: 10px;
@@ -24,44 +24,53 @@ body {
 </head>
 <body>
 
-<div class="container">
+<div class="box">
     <h2>نتيجة التحقق</h2>
     <div id="result">جاري التحقق...</div>
 </div>
 
 <script>
-const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRRAzjYWiKgq1g8LKGfHZUHsQjlE8ibxFG8OsS3PrZYje5QPecRzQNw5onhFWrczCj3YIDa2gkzMd7n/pub?output=csv";
-
 const params = new URLSearchParams(window.location.search);
-const snFromQR = params.get("sn");
+const sn = params.get("sn");
 
-if (!snFromQR) {
+if (!sn) {
     document.getElementById("result").innerHTML = "❌ رقم البطاقة غير موجود";
+    throw new Error("No SN");
 }
 
-fetch(csvURL)
+// رابط Google Sheet بصيغة JSON
+const sheetURL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vRRAzjYWiKgq1g8LKGfHZUHsQjlE8ibxFG8OsS3PrZYje5QPecRzQNw5onhFWrczCj3YIDa2gkzMd7n/gviz/tq?tqx=out:json";
+
+fetch(sheetURL)
 .then(res => res.text())
-.then(csv => {
-    const rows = csv.split("\n").map(r => r.split(","));
-    const headers = rows[0];
+.then(text => {
+    const json = JSON.parse(text.substring(47).slice(0, -2));
+    const rows = json.table.rows;
 
-    const indexSN = headers.indexOf("SN");
-    const indexName = headers.indexOf("name");
-    const indexUnion = headers.indexOf("union");
-    const indexRole = headers.indexOf("role");
+    let found = null;
 
-    const card = rows.find((row, i) => i > 0 && row[indexSN] === snFromQR);
+    rows.forEach(r => {
+        const rowSN = r.c[6]?.v?.toString().trim(); // العمود SN
+        if (rowSN === sn.trim()) {
+            found = {
+                name: r.c[0]?.v,
+                union: r.c[1]?.v,
+                role: r.c[2]?.v
+            };
+        }
+    });
 
-    const resultDiv = document.getElementById("result");
+    const result = document.getElementById("result");
 
-    if (card) {
-        resultDiv.innerHTML = `
-            <p><strong>الاسم الثلاثي:</strong> ${card[indexName]}</p>
-            <p><strong>الرقم النقابي:</strong> ${card[indexUnion]}</p>
-            <p><strong>الصفة النقابية:</strong> ${card[indexRole]}</p>
+    if (found) {
+        result.innerHTML = `
+            <p><strong>الاسم الثلاثي:</strong> ${found.name}</p>
+            <p><strong>الرقم النقابي:</strong> ${found.union}</p>
+            <p><strong>الصفة النقابية:</strong> ${found.role}</p>
         `;
     } else {
-        resultDiv.innerHTML = "❌ لم يتم العثور على البطاقة";
+        result.innerHTML = "❌ لم يتم العثور على البطاقة";
     }
 });
 </script>
