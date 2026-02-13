@@ -4,33 +4,106 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>التحقق من البطاقة</title>
 
 <style>
+:root {
+    --primary: #428177;
+    --dark-green: #054239;
+    --deep-green: #002623;
+    --light-bg: #edebe0;
+    --accent-dark: #4a151e;
+    --accent-deep: #260f14;
+    --white: #ffffff;
+    --gray: #3d3a3b;
+    --black: #161616;
+}
+
 body {
-    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", Tahoma, sans-serif;
     direction: rtl;
-    text-align: center;
-    background: #f2f2f2;
+    background: linear-gradient(135deg, var(--deep-green), var(--dark-green));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
 }
-.box {
-    background: white;
-    padding: 20px;
-    margin: 60px auto;
+
+.container {
+    background: var(--white);
     width: 90%;
-    max-width: 400px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    max-width: 500px;
+    padding: 30px 25px;
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    text-align: center;
+    animation: fadeIn 0.6s ease-in-out;
 }
+
 h2 {
-    margin-bottom: 20px;
+    margin-top: 0;
+    color: var(--dark-green);
+    font-size: 24px;
+}
+
+.message {
+    font-size: 18px;
+    color: var(--gray);
+    margin: 15px 0;
+    line-height: 1.7;
+}
+
+.sn-box {
+    background: var(--light-bg);
+    padding: 15px;
+    border-radius: 12px;
+    margin: 20px 0;
+    font-size: 22px;
+    font-weight: bold;
+    color: var(--accent-dark);
+    letter-spacing: 2px;
+}
+
+.success {
+    color: var(--primary);
+    font-weight: bold;
+}
+
+.error {
+    color: var(--accent-dark);
+    font-weight: bold;
+}
+
+.footer {
+    margin-top: 20px;
+    font-size: 16px;
+    color: var(--black);
+    font-weight: 600;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .container {
+        padding: 20px 15px;
+    }
+    .sn-box {
+        font-size: 18px;
+    }
 }
 </style>
 
 </head>
 <body>
 
-<div class="box">
+<div class="container">
     <h2>نتيجة التحقق</h2>
     <div id="result">جاري التحقق...</div>
 </div>
@@ -42,8 +115,10 @@ const sheetURL = "https://opensheet.elk.sh/1b-WOr0vxcbaSoEN4SAmL03pucb6YVZEWVZm_
 const params = new URLSearchParams(window.location.search);
 const sn = params.get("sn");
 
+const resultDiv = document.getElementById("result");
+
 if (!sn) {
-    document.getElementById("result").innerHTML = "❌ رقم البطاقة غير موجود";
+    resultDiv.innerHTML = `<div class="error">❌ رقم البطاقة غير موجود</div>`;
 } else {
 
 fetch(sheetURL)
@@ -54,21 +129,40 @@ fetch(sheetURL)
         row.SN && row.SN.toString().trim() === sn.toString().trim()
     );
 
-    const result = document.getElementById("result");
-
     if (card) {
-        result.innerHTML = `
-            <p><strong>الاسم الثلاثي:</strong> ${card.name}</p>
-            <p><strong>الرقم النقابي:</strong> ${card.union}</p>
-            <p><strong>الصفة النقابية:</strong> ${card.role}</p>
+        resultDiv.innerHTML = `
+            <div class="message success">
+                أهلاً وسهلاً بكم<br>
+                تم التحقق من البطاقة ذات الرقم التسلسلي
+            </div>
+
+            <div class="sn-box">
+                ${card.SN}
+            </div>
+
+            <div class="message">
+                يرجى تسهيل عمل حامل هذه البطاقة
+            </div>
+
+            <div class="footer">
+                الاتحاد العام لنقابات العمال
+            </div>
         `;
     } else {
-        result.innerHTML = "❌ لم يتم العثور على البطاقة";
+        resultDiv.innerHTML = `
+            <div class="error">
+                ❌ البطاقة غير موجودة
+            </div>
+        `;
     }
 
 })
 .catch(() => {
-    document.getElementById("result").innerHTML = "❌ حدث خطأ أثناء جلب البيانات";
+    resultDiv.innerHTML = `
+        <div class="error">
+            ❌ حدث خطأ أثناء جلب البيانات
+        </div>
+    `;
 });
 
 }
